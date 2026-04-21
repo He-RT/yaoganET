@@ -43,15 +43,15 @@
       "type": "file"
     },
     {
-      "path": "backend/requirements.txt",
-      "accessCount": 1,
-      "lastAccessed": 1776746993702,
+      "path": "backend/app.py",
+      "accessCount": 2,
+      "lastAccessed": 1776754183942,
       "type": "file"
     },
     {
-      "path": "backend/app.py",
+      "path": "backend/requirements.txt",
       "accessCount": 1,
-      "lastAccessed": 1776747030280,
+      "lastAccessed": 1776746993702,
       "type": "file"
     },
     {

@@ -84,8 +84,11 @@ def _era5_et0(aoi: ee.Geometry, start: str, end: str) -> dict[str, Any]:
         # Pressure kPa.
         p = img.select("surface_pressure").divide(1000)
 
-        # Net shortwave proxy: ERA5-Land provides surface_net_solar_radiation_sum (J/m^2/day).
-        rn = img.select("surface_net_solar_radiation_sum").divide(1_000_000)  # MJ/m^2/day
+        # Net radiation Rn = Rns (net shortwave) + Rnl (net longwave, typically negative).
+        # ERA5-Land provides both as daily sums in J/m^2; convert to MJ/m^2/day.
+        rns = img.select("surface_net_solar_radiation_sum").divide(1_000_000)
+        rnl = img.select("surface_net_thermal_radiation_sum").divide(1_000_000)
+        rn = rns.add(rnl)
 
         # Saturation & actual vapor pressure (FAO-56).
         def es(t: ee.Image) -> ee.Image:
