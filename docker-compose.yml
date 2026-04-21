@@ -3,8 +3,7 @@ services:
     build: .
     container_name: irrigation
     restart: unless-stopped
-    ports:
-      - "8000:8000"
+    network_mode: host
     environment:
       GEE_PROJECT: chuang-yaogan
       GEE_SERVICE_ACCOUNT_EMAIL: ${GEE_SERVICE_ACCOUNT_EMAIL}
