@@ -1,0 +1,7 @@
+.git
+.omc
+backend/.venv
+**/__pycache__
+*.pyc
+secrets
+.env

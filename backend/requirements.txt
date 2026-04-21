@@ -1,0 +1,4 @@
+fastapi>=0.110
+uvicorn[standard]>=0.27
+earthengine-api>=0.1.390
+pydantic>=2.5

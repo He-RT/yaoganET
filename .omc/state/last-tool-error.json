@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"tail -5 /private/tmp/claude-501/-Users-hert-Projects-chuangcc/59f4df6e-4f62-47c7-8b04-98db03b5722d/tasks/bqe3ad234.output 2>/dev/null; ls /Users/hert/Projects/chuangcc/backend/.venv/bin/uv...",
+  "error": "Exit code 1\nls: /Users/hert/Projects/chuangcc/backend/.venv/bin/uvicorn: No such file or directory",
+  "timestamp": "2026-04-21T04:53:20.731Z",
+  "retry_count": 2
+}

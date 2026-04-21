@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>农田灌溉助手</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<style>
+  html, body { margin: 0; height: 100%; font-family: system-ui, -apple-system, "PingFang SC", sans-serif; }
+  #app { display: grid; grid-template-columns: 1fr 360px; height: 100%; }
+  #map { height: 100%; }
+  #panel { padding: 16px; border-left: 1px solid #e5e5e5; overflow-y: auto; background: #fafafa; }
+  h1 { font-size: 18px; margin: 0 0 12px; }
+  button { width: 100%; padding: 10px 12px; border: 0; border-radius: 6px; background: #2f855a; color: #fff; font-size: 14px; cursor: pointer; }
+  button:disabled { background: #a0aec0; cursor: not-allowed; }
+  .row { margin: 10px 0; font-size: 13px; }
+  .row label { display: block; margin-bottom: 4px; color: #555; }
+  .row input { width: 100%; padding: 6px; box-sizing: border-box; }
+  .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 10px 12px; margin-top: 12px; font-size: 13px; line-height: 1.5; }
+  .card h3 { margin: 0 0 6px; font-size: 14px; color: #2f855a; }
+  .muted { color: #888; }
+  .err { color: #c53030; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="map"></div>
+  <div id="panel">
+    <h1>农田灌溉助手</h1>
+    <p class="muted">在地图上绘制田块多边形，然后点击"分析"。系统会从 GEE 拉取最新无云 Sentinel-2 影像并基于 ERA5-Land 计算参考蒸散 ET0。</p>
+    <div class="row">
+      <label>回溯天数</label>
+      <input id="days" type="number" min="1" max="120" value="30" />
+    </div>
+    <button id="run" disabled>分析</button>
+    <div id="status" class="row"></div>
+    <div id="results"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script>
+const map = L.map('map').setView([34.75, 113.65], 6);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19, attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+
+const drawn = new L.FeatureGroup().addTo(map);
+let s2Layer = null;
+
+const drawControl = new L.Control.Draw({
+  draw: {
+    polygon: { allowIntersection: false, showArea: true },
+    rectangle: true, polyline: false, circle: false, marker: false, circlemarker: false
+  },
+  edit: { featureGroup: drawn }
+});
+map.addControl(drawControl);
+
+const runBtn = document.getElementById('run');
+const statusEl = document.getElementById('status');
+const resultsEl = document.getElementById('results');
+
+map.on(L.Draw.Event.CREATED, (e) => {
+  drawn.clearLayers();
+  drawn.addLayer(e.layer);
+  runBtn.disabled = false;
+});
+
+runBtn.addEventListener('click', async () => {
+  const layers = drawn.getLayers();
+  if (!layers.length) return;
+  const geojson = layers[0].toGeoJSON().geometry;
+  const days = Number(document.getElementById('days').value) || 30;
+
+  runBtn.disabled = true;
+  statusEl.textContent = '分析中…（首次可能需要 GEE 初始化）';
+  statusEl.className = 'row muted';
+  resultsEl.innerHTML = '';
+
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ geometry: geojson, days })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    statusEl.textContent = `时段 ${data.window.start} — ${data.window.end}`;
+    renderResults(data);
+  } catch (err) {
+    statusEl.textContent = '失败：' + err.message;
+    statusEl.className = 'row err';
+  } finally {
+    runBtn.disabled = false;
+  }
+});
+
+function renderResults(data) {
+  const cards = [];
+  const s2 = data.sentinel2;
+  if (s2.available) {
+    const acq = new Date(s2.acquired).toISOString().slice(0, 10);
+    cards.push(`
+      <div class="card">
+        <h3>Sentinel-2 最新影像</h3>
+        <div>影像 ID：${s2.image_id}</div>
+        <div>成像日期：${acq}</div>
+        <div>云量：${(s2.cloud_pct ?? 0).toFixed(1)}%</div>
+        <div>平均 NDVI：${(s2.ndvi_mean ?? 0).toFixed(3)}</div>
+      </div>
+    `);
+    if (s2Layer) map.removeLayer(s2Layer);
+    s2Layer = L.tileLayer(s2.tile_url_template, { opacity: 0.85 }).addTo(map);
+  } else {
+    cards.push(`<div class="card"><h3>Sentinel-2</h3><div class="muted">时段内未找到符合条件的影像。</div></div>`);
+  }
+
+  const e = data.et0;
+  if (e.available) {
+    const et0 = Number(e.et0_mean_mm_per_day || 0);
+    cards.push(`
+      <div class="card">
+        <h3>参考蒸散 ET0</h3>
+        <div>ERA5-Land 有效天数：${e.days}</div>
+        <div>ET0 平均：<b>${et0.toFixed(2)} mm/天</b></div>
+        <div class="muted">该值为参考蒸散，后续可结合作物系数 Kc 得到实际需水量。</div>
+      </div>
+    `);
+  } else {
+    cards.push(`<div class="card"><h3>ET0</h3><div class="muted">ERA5-Land 数据暂不可用。</div></div>`);
+  }
+  resultsEl.innerHTML = cards.join('');
+}
+</script>
+</body>
+</html>

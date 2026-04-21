@@ -1,0 +1,59 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1776746963576,
+  "projectRoot": "/Users/hert/Projects/chuangcc",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {},
+  "hotPaths": [
+    {
+      "path": "backend/requirements.txt",
+      "accessCount": 1,
+      "lastAccessed": 1776746993702,
+      "type": "file"
+    },
+    {
+      "path": "backend/app.py",
+      "accessCount": 1,
+      "lastAccessed": 1776747030280,
+      "type": "file"
+    },
+    {
+      "path": "frontend/index.html",
+      "accessCount": 1,
+      "lastAccessed": 1776747055025,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
+      "accessCount": 1,
+      "lastAccessed": 1776747066876,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

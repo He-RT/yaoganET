@@ -1,0 +1,13 @@
+services:
+  irrigation:
+    build: .
+    container_name: irrigation
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      GEE_PROJECT: chuang-yaogan
+      GEE_SERVICE_ACCOUNT_EMAIL: ${GEE_SERVICE_ACCOUNT_EMAIL}
+      GEE_SERVICE_ACCOUNT_KEY: /secrets/gee-key.json
+    volumes:
+      - ./secrets/gee-key.json:/secrets/gee-key.json:ro
