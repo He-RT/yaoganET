@@ -37,15 +37,15 @@
       "type": "file"
     },
     {
-      "path": "docker-compose.yml",
-      "accessCount": 2,
-      "lastAccessed": 1776753008171,
+      "path": "backend/app.py",
+      "accessCount": 3,
+      "lastAccessed": 1776754919776,
       "type": "file"
     },
     {
-      "path": "backend/app.py",
+      "path": "docker-compose.yml",
       "accessCount": 2,
-      "lastAccessed": 1776754183942,
+      "lastAccessed": 1776753008171,
       "type": "file"
     },
     {
@@ -58,6 +58,12 @@
       "path": "README.md",
       "accessCount": 1,
       "lastAccessed": 1776747066876,
+      "type": "file"
+    },
+    {
+      "path": "docs/et0.md",
+      "accessCount": 1,
+      "lastAccessed": 1776754980158,
       "type": "file"
     }
   ],
