@@ -7,8 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="theme-color" content="#2f855a" />
 <title>农田灌溉助手</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<link rel="stylesheet" href="https://cdn.staticfile.org/leaflet/1.9.4/leaflet.min.css" />
+<link rel="stylesheet" href="https://cdn.staticfile.org/leaflet.draw/1.0.4/leaflet.draw.css" />
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -22,9 +22,10 @@
   #app {
     display: grid;
     grid-template-columns: 1fr 360px;
+    height: 100vh;
     height: 100dvh;
   }
-  #map { height: 100%; }
+  #map { height: 100%; width: 100%; background: #e8edf2; }
   #panel {
     padding: 16px;
     border-left: 1px solid #e5e5e5;
@@ -74,13 +75,19 @@
   /* ---- 移动端（<768px）：上图 + 底部抽屉 ---- */
   @media (max-width: 767px) {
     #app {
-      grid-template-columns: 1fr;
-      grid-template-rows: 1fr auto;
+      display: block;   /* 改用块布局，避免 grid 在部分浏览器下塌陷 */
+      height: auto;
+      min-height: 100vh;
     }
-    #map { height: 60dvh; }
+    #map {
+      height: 60vh;
+      height: 60dvh;
+      width: 100%;
+    }
     #panel {
       border-left: 0;
       border-top: 1px solid #e5e5e5;
+      max-height: 40vh;
       max-height: 40dvh;
       padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
     }
@@ -127,12 +134,16 @@
   </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://cdn.staticfile.org/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.staticfile.org/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <script>
 const map = L.map('map', { tap: true, zoomControl: true }).setView([34.75, 113.65], 6);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19, attribution: '&copy; OpenStreetMap'
+// 国内可直连的高德卫星 + 注记图层（WGS84 近似偏移很小，展示够用）
+L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', {
+  subdomains: '1234', maxZoom: 18, attribution: '&copy; AutoNavi'
+}).addTo(map);
+L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=8&x={x}&y={y}&z={z}', {
+  subdomains: '1234', maxZoom: 18
 }).addTo(map);
 
 const drawn = new L.FeatureGroup().addTo(map);
