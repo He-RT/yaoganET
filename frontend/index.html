@@ -4,141 +4,305 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="mobile-web-app-capable" content="yes" />
-<meta name="theme-color" content="#2f855a" />
+<meta name="theme-color" content="#1f7a4d" />
 <title>农田灌溉助手</title>
 <link rel="stylesheet" href="https://cdn.staticfile.org/leaflet/1.9.4/leaflet.min.css" />
 <link rel="stylesheet" href="https://cdn.staticfile.org/leaflet.draw/1.0.4/leaflet.draw.css" />
 <style>
+  :root {
+    --primary: #1f7a4d;
+    --primary-600: #196640;
+    --primary-50: #e6f4ec;
+    --text: #1a202c;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --surface: #ffffff;
+    --bg: #f4f6f8;
+    --danger: #c53030;
+    --radius: 14px;
+    --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06);
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0;
     height: 100%;
-    font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: var(--bg);
     overscroll-behavior: none;
   }
 
-  /* ---- 桌面（≥768px）：左图右栏 ---- */
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 360px;
+  /* ===== 地图铺满 ===== */
+  #map {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
     height: 100vh;
     height: 100dvh;
-  }
-  #map { height: 100%; width: 100%; background: #e8edf2; }
-  #panel {
-    padding: 16px;
-    border-left: 1px solid #e5e5e5;
-    overflow-y: auto;
-    background: #fafafa;
-    -webkit-overflow-scrolling: touch;
+    background: #dbe3ec;
+    z-index: 0;
   }
 
-  h1 { font-size: 18px; margin: 0 0 12px; }
-  .intro { font-size: 13px; color: #666; line-height: 1.5; margin: 0 0 12px; }
-  button {
+  /* ===== 顶部标题 ===== */
+  .topbar {
+    position: fixed;
+    top: calc(12px + env(safe-area-inset-top));
+    left: 12px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--surface);
+    border-radius: 999px;
+    box-shadow: var(--shadow-sm);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .topbar .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-50);
+  }
+
+  /* ===== 浮动面板（两端共用，布局用 media 切换位置） ===== */
+  .sheet {
+    position: fixed;
+    z-index: 1000;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sheet .drag {
+    display: none;
+    width: 40px; height: 4px;
+    background: #cbd5e0;
+    border-radius: 2px;
+    margin: 8px auto 0;
+    flex-shrink: 0;
+  }
+  .sheet-head {
+    padding: 14px 18px 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .sheet-head h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sheet-head .hint {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .sheet-head .toggle {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 400;
+    transition: transform .2s;
+  }
+  .sheet.collapsed .toggle { transform: rotate(180deg); }
+
+  .sheet-body {
+    padding: 14px 18px 18px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    flex: 1;
+  }
+  .sheet.collapsed .sheet-body { display: none; }
+
+  /* 表单 */
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    letter-spacing: .3px;
+  }
+  .field input {
     width: 100%;
-    padding: 12px 14px;
+    padding: 10px 12px;
+    font-size: 15px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fafbfc;
+    color: var(--text);
+    transition: border-color .15s, background .15s;
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: #fff;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 13px 16px;
     border: 0;
-    border-radius: 8px;
-    background: #2f855a;
+    border-radius: 12px;
+    background: var(--primary);
     color: #fff;
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background .15s, transform .05s;
   }
-  button:disabled { background: #a0aec0; cursor: not-allowed; }
-  button:active:not(:disabled) { background: #276749; }
-  .row { margin: 10px 0; font-size: 13px; }
-  .row label { display: block; margin-bottom: 4px; color: #555; }
-  .row input {
-    width: 100%;
-    padding: 10px;
-    font-size: 15px; /* ≥16px 以上在 iOS Safari 可避免聚焦缩放；这里配合 maximum-scale=1 也可 */
-    border: 1px solid #cbd5e0;
-    border-radius: 6px;
-    background: #fff;
+  .btn:active:not(:disabled) { background: var(--primary-600); transform: scale(0.99); }
+  .btn:disabled { background: #cbd5e0; color: #fff; cursor: not-allowed; }
+  .btn .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    display: none;
   }
+  .btn.loading .spinner { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 状态 / 结果 */
+  .status {
+    margin: 12px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .status.err { color: var(--danger); }
+  .status.ok { color: var(--primary); }
+
   .card {
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 8px;
-    padding: 10px 12px;
+    background: #fcfdfd;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
     margin-top: 12px;
+  }
+  .card-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin: 0 0 8px;
+  }
+  .card-title .icon { font-size: 14px; }
+  .row-kv {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 3px 0;
     font-size: 13px;
-    line-height: 1.6;
   }
-  .card h3 { margin: 0 0 6px; font-size: 14px; color: #2f855a; }
-  .muted { color: #888; }
-  .err { color: #c53030; }
+  .row-kv .k { color: var(--muted); }
+  .row-kv .v { color: var(--text); font-variant-numeric: tabular-nums; }
+  .row-kv.big .v { font-size: 20px; font-weight: 600; color: var(--primary); }
+  .empty { font-size: 13px; color: var(--muted); padding: 4px 0; }
 
-  /* ---- 移动端（<768px）：上图 + 底部抽屉 ---- */
+  .tip {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ===== 桌面：右侧浮动卡片 ===== */
+  @media (min-width: 768px) {
+    .sheet {
+      top: calc(16px + env(safe-area-inset-top));
+      right: 16px;
+      bottom: 16px;
+      width: 380px;
+      border-radius: var(--radius);
+    }
+    .sheet-head { cursor: default; }
+    .sheet-head .toggle { display: none; }
+  }
+
+  /* ===== 移动：底部抽屉 ===== */
   @media (max-width: 767px) {
-    #app {
-      display: block;   /* 改用块布局，避免 grid 在部分浏览器下塌陷 */
-      height: auto;
-      min-height: 100vh;
+    .topbar { font-size: 13px; padding: 6px 12px; }
+    .sheet {
+      left: 0; right: 0; bottom: 0;
+      border-radius: 18px 18px 0 0;
+      border-left: 0; border-right: 0; border-bottom: 0;
+      max-height: 75vh;
+      max-height: 75dvh;
+      padding-bottom: env(safe-area-inset-bottom);
+      transition: transform .25s ease;
     }
-    #map {
-      height: 60vh;
-      height: 60dvh;
-      width: 100%;
+    .sheet .drag { display: block; }
+    .sheet.collapsed {
+      transform: translateY(0);
     }
-    #panel {
-      border-left: 0;
-      border-top: 1px solid #e5e5e5;
-      max-height: 40vh;
-      max-height: 40dvh;
-      padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
-    }
-    .intro { display: none; } /* 移动端不挤空间 */
-    #panel.collapsed { max-height: 56px; overflow: hidden; padding-bottom: 8px; }
-    #panel.collapsed .row,
-    #panel.collapsed #run,
-    #panel.collapsed #results { display: none; }
-
-    /* 抽屉把手 */
-    .handle {
-      display: block;
-      width: 40px;
-      height: 4px;
-      background: #cbd5e0;
-      border-radius: 2px;
-      margin: 2px auto 10px;
-    }
-    h1 { font-size: 16px; margin: 0 0 8px; text-align: center; }
-
-    /* Leaflet 绘制工具栏在小屏上放大触控区 */
-    .leaflet-draw-toolbar a { width: 34px !important; height: 34px !important; line-height: 34px !important; }
+    .sheet-head { padding: 8px 18px 10px; }
   }
-  @media (min-width: 768px) { .handle { display: none; } }
 
-  /* 为底部抽屉在绘制时留出地图可视空间 */
-  .leaflet-control-attribution { font-size: 10px; }
+  /* Leaflet 控件样式柔化 */
+  .leaflet-control-zoom { box-shadow: var(--shadow-sm); border-radius: 10px !important; overflow: hidden; }
+  .leaflet-control-zoom a {
+    background: var(--surface) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+  }
+  .leaflet-draw-toolbar a { background-color: var(--surface) !important; }
+  .leaflet-control-attribution { font-size: 10px; opacity: .7; }
 </style>
 </head>
 <body>
-<div id="app">
-  <div id="map"></div>
-  <div id="panel">
-    <span class="handle" id="handle" aria-hidden="true"></span>
-    <h1>农田灌溉助手</h1>
-    <p class="intro">在地图上绘制田块，然后点击"分析"。系统会从 GEE 拉取最新无云 Sentinel-2 影像并基于 ERA5-Land 计算参考蒸散 ET0。</p>
-    <div class="row">
-      <label>回溯天数</label>
+<div id="map"></div>
+
+<div class="topbar">
+  <span class="dot"></span>
+  <span>农田灌溉助手</span>
+</div>
+
+<aside class="sheet" id="sheet">
+  <span class="drag" id="drag" aria-hidden="true"></span>
+  <div class="sheet-head" id="sheetHead">
+    <h2>
+      <span>田块分析</span>
+      <span class="toggle">▾</span>
+    </h2>
+    <p class="hint" id="hint">在地图上绘制田块，然后点击"分析"</p>
+  </div>
+  <div class="sheet-body">
+    <div class="field">
+      <label for="days">回溯天数</label>
       <input id="days" type="number" min="1" max="120" value="30" inputmode="numeric" />
     </div>
-    <button id="run" disabled>分析</button>
-    <div id="status" class="row"></div>
+    <button id="run" class="btn" disabled>
+      <span class="spinner"></span>
+      <span id="runLabel">分析</span>
+    </button>
+    <div id="status" class="status"></div>
     <div id="results"></div>
   </div>
-</div>
+</aside>
 
 <script src="https://cdn.staticfile.org/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.staticfile.org/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <script>
-const map = L.map('map', { tap: true, zoomControl: true }).setView([34.75, 113.65], 6);
-// 国内可直连的高德卫星 + 注记图层（WGS84 近似偏移很小，展示够用）
+// -------- 地图 --------
+const map = L.map('map', { zoomControl: true, attributionControl: true }).setView([34.75, 113.65], 6);
+
+// 高德卫星底图 + 注记
 L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', {
   subdomains: '1234', maxZoom: 18, attribution: '&copy; AutoNavi'
 }).addTo(map);
@@ -150,15 +314,17 @@ const drawn = new L.FeatureGroup().addTo(map);
 let s2Layer = null;
 
 const drawControl = new L.Control.Draw({
+  position: 'topleft',
   draw: {
-    polygon: { allowIntersection: false, showArea: true },
-    rectangle: true, polyline: false, circle: false, marker: false, circlemarker: false
+    polygon: { allowIntersection: false, showArea: true, shapeOptions: { color: '#1f7a4d', weight: 2 } },
+    rectangle: { shapeOptions: { color: '#1f7a4d', weight: 2 } },
+    polyline: false, circle: false, marker: false, circlemarker: false
   },
   edit: { featureGroup: drawn }
 });
 map.addControl(drawControl);
 
-// 尝试定位到用户位置（更方便手机用户）
+// 尝试定位
 if (navigator.geolocation) {
   navigator.geolocation.getCurrentPosition(
     (pos) => map.setView([pos.coords.latitude, pos.coords.longitude], 15),
@@ -167,27 +333,40 @@ if (navigator.geolocation) {
   );
 }
 
+// -------- DOM refs --------
 const runBtn = document.getElementById('run');
+const runLabel = document.getElementById('runLabel');
 const statusEl = document.getElementById('status');
 const resultsEl = document.getElementById('results');
-const panel = document.getElementById('panel');
-const handle = document.getElementById('handle');
+const hintEl = document.getElementById('hint');
+const sheet = document.getElementById('sheet');
+const sheetHead = document.getElementById('sheetHead');
 
-// 移动端底部抽屉折叠切换
-handle.addEventListener('click', () => {
-  panel.classList.toggle('collapsed');
+// -------- 抽屉折叠（仅移动端可点击折叠，桌面固定展开） --------
+const isMobile = () => window.matchMedia('(max-width: 767px)').matches;
+sheetHead.addEventListener('click', () => {
+  if (!isMobile()) return;
+  sheet.classList.toggle('collapsed');
   setTimeout(() => map.invalidateSize(), 250);
 });
 
+// -------- 绘制回调 --------
 map.on(L.Draw.Event.CREATED, (e) => {
   drawn.clearLayers();
   drawn.addLayer(e.layer);
   runBtn.disabled = false;
-  // 绘制完成后自动展开抽屉
-  panel.classList.remove('collapsed');
+  hintEl.textContent = '已选中一个田块，点击下方"分析"';
+  sheet.classList.remove('collapsed');
   setTimeout(() => map.invalidateSize(), 250);
 });
+map.on(L.Draw.Event.DELETED, () => {
+  if (drawn.getLayers().length === 0) {
+    runBtn.disabled = true;
+    hintEl.textContent = '在地图上绘制田块，然后点击"分析"';
+  }
+});
 
+// -------- 分析 --------
 runBtn.addEventListener('click', async () => {
   const layers = drawn.getLayers();
   if (!layers.length) return;
@@ -195,8 +374,10 @@ runBtn.addEventListener('click', async () => {
   const days = Number(document.getElementById('days').value) || 30;
 
   runBtn.disabled = true;
-  statusEl.textContent = '分析中…（首次可能需要 GEE 初始化）';
-  statusEl.className = 'row muted';
+  runBtn.classList.add('loading');
+  runLabel.textContent = '分析中…';
+  statusEl.textContent = '正在从 GEE 拉取数据，首次较慢（10–30 秒）';
+  statusEl.className = 'status';
   resultsEl.innerHTML = '';
 
   try {
@@ -208,27 +389,31 @@ runBtn.addEventListener('click', async () => {
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
     statusEl.textContent = `时段 ${data.window.start} — ${data.window.end}`;
+    statusEl.className = 'status ok';
     renderResults(data);
   } catch (err) {
-    statusEl.textContent = '失败：' + err.message;
-    statusEl.className = 'row err';
+    statusEl.textContent = '失败：' + (err.message || err);
+    statusEl.className = 'status err';
   } finally {
     runBtn.disabled = false;
+    runBtn.classList.remove('loading');
+    runLabel.textContent = '重新分析';
   }
 });
 
+// -------- 渲染结果 --------
 function renderResults(data) {
-  const cards = [];
+  const parts = [];
+
   const s2 = data.sentinel2;
   if (s2.available) {
     const acq = new Date(s2.acquired).toISOString().slice(0, 10);
-    cards.push(`
+    parts.push(`
       <div class="card">
-        <h3>Sentinel-2 最新影像</h3>
-        <div>影像 ID：${s2.image_id}</div>
-        <div>成像日期：${acq}</div>
-        <div>云量：${(s2.cloud_pct ?? 0).toFixed(1)}%</div>
-        <div>平均 NDVI：${(s2.ndvi_mean ?? 0).toFixed(3)}</div>
+        <div class="card-title"><span class="icon">🛰️</span>Sentinel-2 最新影像</div>
+        <div class="row-kv"><span class="k">成像日期</span><span class="v">${acq}</span></div>
+        <div class="row-kv"><span class="k">云量</span><span class="v">${(s2.cloud_pct ?? 0).toFixed(1)}%</span></div>
+        <div class="row-kv big"><span class="k">平均 NDVI</span><span class="v">${(s2.ndvi_mean ?? 0).toFixed(3)}</span></div>
       </div>
     `);
     if (s2.tile_url_template) {
@@ -236,27 +421,38 @@ function renderResults(data) {
       s2Layer = L.tileLayer(s2.tile_url_template, { opacity: 0.85 }).addTo(map);
     }
   } else {
-    cards.push(`<div class="card"><h3>Sentinel-2</h3><div class="muted">时段内未找到符合条件的影像。</div></div>`);
+    parts.push(`
+      <div class="card">
+        <div class="card-title"><span class="icon">🛰️</span>Sentinel-2</div>
+        <div class="empty">时段内未找到符合条件的影像，试试增加回溯天数。</div>
+      </div>
+    `);
   }
 
   const e = data.et0;
   if (e.available) {
     const et0 = Number(e.et0_mean_mm_per_day || 0);
-    cards.push(`
+    parts.push(`
       <div class="card">
-        <h3>参考蒸散 ET0</h3>
-        <div>ERA5-Land 有效天数：${e.days}</div>
-        <div>ET0 平均：<b>${et0.toFixed(2)} mm/天</b></div>
-        <div class="muted">该值为参考蒸散，后续可结合作物系数 Kc 得到实际需水量。</div>
+        <div class="card-title"><span class="icon">💧</span>参考蒸散 ET0</div>
+        <div class="row-kv big"><span class="k">日均 ET0</span><span class="v">${et0.toFixed(2)} <small style="font-size:12px;color:var(--muted);font-weight:400">mm/天</small></span></div>
+        <div class="row-kv"><span class="k">有效天数</span><span class="v">${e.days}</span></div>
+        <div class="tip">ET0 为参考蒸散，后续将结合作物系数 Kc 得到实际需水量 ETc，再扣除近期降水推荐灌水量。</div>
       </div>
     `);
   } else {
-    cards.push(`<div class="card"><h3>ET0</h3><div class="muted">ERA5-Land 数据暂不可用。</div></div>`);
+    parts.push(`
+      <div class="card">
+        <div class="card-title"><span class="icon">💧</span>ET0</div>
+        <div class="empty">ERA5-Land 数据暂不可用。</div>
+      </div>
+    `);
   }
-  resultsEl.innerHTML = cards.join('');
+
+  resultsEl.innerHTML = parts.join('');
 }
 
-// 旋转屏 / 软键盘收起后修正地图尺寸
+// -------- 自适应 --------
 window.addEventListener('resize', () => map.invalidateSize());
 window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 300));
 </script>
