@@ -38,8 +38,14 @@
     },
     {
       "path": "backend/app.py",
-      "accessCount": 3,
-      "lastAccessed": 1776754919776,
+      "accessCount": 4,
+      "lastAccessed": 1776755475211,
+      "type": "file"
+    },
+    {
+      "path": "docs/et0.md",
+      "accessCount": 4,
+      "lastAccessed": 1776755581815,
       "type": "file"
     },
     {
@@ -58,12 +64,6 @@
       "path": "README.md",
       "accessCount": 1,
       "lastAccessed": 1776747066876,
-      "type": "file"
-    },
-    {
-      "path": "docs/et0.md",
-      "accessCount": 1,
-      "lastAccessed": 1776754980158,
       "type": "file"
     }
   ],

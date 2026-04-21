@@ -28,7 +28,11 @@ $$
 | $\Delta$ | 饱和水汽压-温度曲线斜率 | kPa·°C⁻¹ |
 | $\gamma$ | 干湿计常数 | kPa·°C⁻¹ |
 
-> 注：ERA5-Land 的净辐射已经是波段产品，`0.408 × Rn` 这一步等价于把 MJ/m²/day 换算成蒸发当量 mm/day；在代码中我们直接沿用 FAO-56 的数值形式：`delta * Rn`，其中 $R_n$ 单位已是 MJ/m²/day，结果单位 mm/day。
+> **关于 0.408**：把净辐射的能量通量换成蒸发的水等效厚度。
+> $\dfrac{1}{\lambda \cdot \rho_w} = \dfrac{1}{2.45\text{ MJ/kg} \times 1000\text{ kg/m}^3} = 0.408\text{ mm/(MJ/m}^2\text{)}$。
+> 当 $R_n$ 已是 MJ/m²/day 时，直接乘 0.408 就得到 mm/day。
+>
+> **不要混淆 0.0864**：那是 W/m² → MJ/m²/day 的时间尺度换算（86400 s × 10⁻⁶ MJ/J）。只在原始输入是瞬时功率 W/m² 时才需要先乘 0.0864。ERA5-Land 的 `*_radiation_sum` 波段已经是 J/m²/day，除以 10⁶ 直接得到 MJ/m²/day，不需要 0.0864。
 
 ---
 
@@ -135,8 +139,9 @@ def compute(img: ee.Image) -> ee.Image:
     gamma = p.multiply(0.000665)
 
     # FAO-56 reference eq. (G ~ 0 at daily step).
+    # 0.408 converts MJ/m^2/day of net radiation to mm/day of evaporated water.
     num = (
-        delta.multiply(rn)
+        delta.multiply(rn).multiply(0.408)
         .add(
             gamma
             .multiply(900)
@@ -201,8 +206,8 @@ return {
 
 | 位置 | 日期窗口 | ET0（mm/day） | 备注 |
 |---|---|---|---|
-| 北京城区 (116.40, 39.90) ~4 km² | 2026-03-22 – 2026-04-21 | ~5.74 | 4 月北京常年 3–6 mm/day，合理 |
-| 河南郑州 (113.65, 34.75) ~1 km² | 2026-03-22 – 2026-04-21 | ~5–7 | 春季华北平原典型值 |
+| 北京城区 (116.40, 39.90) ~4 km² | 2026-03-22 – 2026-04-21 | 3.12 | 4 月北京常年 3–4 mm/day，合理 |
+| 河南郑州 (113.65, 34.75) ~1 km² | 2026-03-22 – 2026-04-21 | ~4 | 春季华北平原典型值 |
 
 ---
 

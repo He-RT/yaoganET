@@ -8,7 +8,7 @@ Endpoints:
 from __future__ import annotations
 
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -110,8 +110,10 @@ def _era5_et0(aoi: ee.Geometry, start: str, end: str) -> dict[str, Any]:
         gamma = p.multiply(0.000665)
 
         # FAO-56 reference eq. (G ~ 0 at daily step).
+        # 0.408 converts MJ/m^2/day of net radiation to mm/day of evaporated water
+        # (= 1 / (latent heat 2.45 MJ/kg * water density 1000 kg/m^3) * 1000 mm/m).
         num = (
-            delta.multiply(rn)
+            delta.multiply(rn).multiply(0.408)
             .add(
                 gamma
                 .multiply(900)
@@ -121,7 +123,9 @@ def _era5_et0(aoi: ee.Geometry, start: str, end: str) -> dict[str, Any]:
             )
         )
         den = delta.add(gamma.multiply(u2.multiply(0.34).add(1)))
-        et0 = num.divide(den).rename("ET0")
+        # Clip to [0, +inf): ET0 is physically non-negative; rare numeric negatives
+        # can appear on cold/cloudy days when net radiation is strongly negative.
+        et0 = num.divide(den).max(0).rename("ET0")
         return et0.copyProperties(img, ["system:time_start"])
 
     et0_coll = coll.map(compute)
@@ -182,10 +186,17 @@ def analyze(req: AnalyzeRequest) -> dict[str, Any]:
         tile_url = s2.visualize(
             bands=["B4", "B3", "B2"], min=0, max=3000
         ).getMapId()
+        ts_ms = props.get("system:time_start")
+        acquired_date = (
+            datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc).date().isoformat()
+            if ts_ms is not None
+            else None
+        )
         s2_info = {
             "available": True,
             "image_id": s2.get("system:index").getInfo(),
-            "acquired": props.get("system:time_start"),
+            "acquired": ts_ms,
+            "acquired_date": acquired_date,
             "cloud_pct": props.get("CLOUDY_PIXEL_PERCENTAGE"),
             "ndvi_mean": ndvi_stats.get("NDVI"),
             "tile_url_template": tile_url["tile_fetcher"].url_format,
