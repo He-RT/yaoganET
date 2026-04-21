@@ -31,6 +31,12 @@
   "directoryMap": {},
   "hotPaths": [
     {
+      "path": "frontend/index.html",
+      "accessCount": 2,
+      "lastAccessed": 1776752651488,
+      "type": "file"
+    },
+    {
       "path": "backend/requirements.txt",
       "accessCount": 1,
       "lastAccessed": 1776746993702,
@@ -40,12 +46,6 @@
       "path": "backend/app.py",
       "accessCount": 1,
       "lastAccessed": 1776747030280,
-      "type": "file"
-    },
-    {
-      "path": "frontend/index.html",
-      "accessCount": 1,
-      "lastAccessed": 1776747055025,
       "type": "file"
     },
     {

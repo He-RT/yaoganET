@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Secrets / credentials
+secrets/
+*.pem
+*.key
+gee-key*.json
+service-account*.json
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Build / runtime
+dist/
+build/
+*.log
+logs/
+
+# OMC / Claude local state
+.omc/
+.claude/

@@ -2,36 +2,124 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#2f855a" />
 <title>农田灌溉助手</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 <style>
-  html, body { margin: 0; height: 100%; font-family: system-ui, -apple-system, "PingFang SC", sans-serif; }
-  #app { display: grid; grid-template-columns: 1fr 360px; height: 100%; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    overscroll-behavior: none;
+  }
+
+  /* ---- 桌面（≥768px）：左图右栏 ---- */
+  #app {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    height: 100dvh;
+  }
   #map { height: 100%; }
-  #panel { padding: 16px; border-left: 1px solid #e5e5e5; overflow-y: auto; background: #fafafa; }
+  #panel {
+    padding: 16px;
+    border-left: 1px solid #e5e5e5;
+    overflow-y: auto;
+    background: #fafafa;
+    -webkit-overflow-scrolling: touch;
+  }
+
   h1 { font-size: 18px; margin: 0 0 12px; }
-  button { width: 100%; padding: 10px 12px; border: 0; border-radius: 6px; background: #2f855a; color: #fff; font-size: 14px; cursor: pointer; }
+  .intro { font-size: 13px; color: #666; line-height: 1.5; margin: 0 0 12px; }
+  button {
+    width: 100%;
+    padding: 12px 14px;
+    border: 0;
+    border-radius: 8px;
+    background: #2f855a;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+  }
   button:disabled { background: #a0aec0; cursor: not-allowed; }
+  button:active:not(:disabled) { background: #276749; }
   .row { margin: 10px 0; font-size: 13px; }
   .row label { display: block; margin-bottom: 4px; color: #555; }
-  .row input { width: 100%; padding: 6px; box-sizing: border-box; }
-  .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 10px 12px; margin-top: 12px; font-size: 13px; line-height: 1.5; }
+  .row input {
+    width: 100%;
+    padding: 10px;
+    font-size: 15px; /* ≥16px 以上在 iOS Safari 可避免聚焦缩放；这里配合 maximum-scale=1 也可 */
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    background: #fff;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
   .card h3 { margin: 0 0 6px; font-size: 14px; color: #2f855a; }
   .muted { color: #888; }
   .err { color: #c53030; }
+
+  /* ---- 移动端（<768px）：上图 + 底部抽屉 ---- */
+  @media (max-width: 767px) {
+    #app {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr auto;
+    }
+    #map { height: 60dvh; }
+    #panel {
+      border-left: 0;
+      border-top: 1px solid #e5e5e5;
+      max-height: 40dvh;
+      padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+    }
+    .intro { display: none; } /* 移动端不挤空间 */
+    #panel.collapsed { max-height: 56px; overflow: hidden; padding-bottom: 8px; }
+    #panel.collapsed .row,
+    #panel.collapsed #run,
+    #panel.collapsed #results { display: none; }
+
+    /* 抽屉把手 */
+    .handle {
+      display: block;
+      width: 40px;
+      height: 4px;
+      background: #cbd5e0;
+      border-radius: 2px;
+      margin: 2px auto 10px;
+    }
+    h1 { font-size: 16px; margin: 0 0 8px; text-align: center; }
+
+    /* Leaflet 绘制工具栏在小屏上放大触控区 */
+    .leaflet-draw-toolbar a { width: 34px !important; height: 34px !important; line-height: 34px !important; }
+  }
+  @media (min-width: 768px) { .handle { display: none; } }
+
+  /* 为底部抽屉在绘制时留出地图可视空间 */
+  .leaflet-control-attribution { font-size: 10px; }
 </style>
 </head>
 <body>
 <div id="app">
   <div id="map"></div>
   <div id="panel">
+    <span class="handle" id="handle" aria-hidden="true"></span>
     <h1>农田灌溉助手</h1>
-    <p class="muted">在地图上绘制田块多边形，然后点击"分析"。系统会从 GEE 拉取最新无云 Sentinel-2 影像并基于 ERA5-Land 计算参考蒸散 ET0。</p>
+    <p class="intro">在地图上绘制田块，然后点击"分析"。系统会从 GEE 拉取最新无云 Sentinel-2 影像并基于 ERA5-Land 计算参考蒸散 ET0。</p>
     <div class="row">
       <label>回溯天数</label>
-      <input id="days" type="number" min="1" max="120" value="30" />
+      <input id="days" type="number" min="1" max="120" value="30" inputmode="numeric" />
     </div>
     <button id="run" disabled>分析</button>
     <div id="status" class="row"></div>
@@ -42,7 +130,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script>
-const map = L.map('map').setView([34.75, 113.65], 6);
+const map = L.map('map', { tap: true, zoomControl: true }).setView([34.75, 113.65], 6);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19, attribution: '&copy; OpenStreetMap'
 }).addTo(map);
@@ -59,14 +147,34 @@ const drawControl = new L.Control.Draw({
 });
 map.addControl(drawControl);
 
+// 尝试定位到用户位置（更方便手机用户）
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    (pos) => map.setView([pos.coords.latitude, pos.coords.longitude], 15),
+    () => {},
+    { timeout: 5000, maximumAge: 300000 }
+  );
+}
+
 const runBtn = document.getElementById('run');
 const statusEl = document.getElementById('status');
 const resultsEl = document.getElementById('results');
+const panel = document.getElementById('panel');
+const handle = document.getElementById('handle');
+
+// 移动端底部抽屉折叠切换
+handle.addEventListener('click', () => {
+  panel.classList.toggle('collapsed');
+  setTimeout(() => map.invalidateSize(), 250);
+});
 
 map.on(L.Draw.Event.CREATED, (e) => {
   drawn.clearLayers();
   drawn.addLayer(e.layer);
   runBtn.disabled = false;
+  // 绘制完成后自动展开抽屉
+  panel.classList.remove('collapsed');
+  setTimeout(() => map.invalidateSize(), 250);
 });
 
 runBtn.addEventListener('click', async () => {
@@ -112,8 +220,10 @@ function renderResults(data) {
         <div>平均 NDVI：${(s2.ndvi_mean ?? 0).toFixed(3)}</div>
       </div>
     `);
-    if (s2Layer) map.removeLayer(s2Layer);
-    s2Layer = L.tileLayer(s2.tile_url_template, { opacity: 0.85 }).addTo(map);
+    if (s2.tile_url_template) {
+      if (s2Layer) map.removeLayer(s2Layer);
+      s2Layer = L.tileLayer(s2.tile_url_template, { opacity: 0.85 }).addTo(map);
+    }
   } else {
     cards.push(`<div class="card"><h3>Sentinel-2</h3><div class="muted">时段内未找到符合条件的影像。</div></div>`);
   }
@@ -134,6 +244,10 @@ function renderResults(data) {
   }
   resultsEl.innerHTML = cards.join('');
 }
+
+// 旋转屏 / 软键盘收起后修正地图尺寸
+window.addEventListener('resize', () => map.invalidateSize());
+window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 300));
 </script>
 </body>
 </html>

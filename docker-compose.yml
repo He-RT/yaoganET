@@ -9,5 +9,8 @@ services:
       GEE_PROJECT: chuang-yaogan
       GEE_SERVICE_ACCOUNT_EMAIL: ${GEE_SERVICE_ACCOUNT_EMAIL}
       GEE_SERVICE_ACCOUNT_KEY: /secrets/gee-key.json
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1}
     volumes:
-      - ./secrets/gee-key.json:/secrets/gee-key.json:ro
+      - ./secrets:/secrets:ro
